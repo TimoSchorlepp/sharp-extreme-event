@@ -7,38 +7,39 @@ from scipy.stats import norm
 from scipy.sparse.linalg import LinearOperator, eigs
 
 ######################################################################
+# define general parameters
 
-np.random.seed(42)
-T = 1
-nt = 2000
-dt = T / nt
-t = np.linspace(0., T, nt + 1)
-z = 3. # observable value for which P(f(X_T^eps) > z) is evaluated
-eps = 0.5
+np.random.seed(42)              # fixed random seed for reproducable results
+T = 1                           # time interval [0,T] for all computations
+nt = 2000                       # time resolution
+dt = T / nt                     # uniform time step dt
+t = np.linspace(0., T, nt + 1)  # time array
+z = 3.                          # observable value for which P(f(X_T^eps) > z) is evaluated
+eps = 0.5                       # noise strength for direct sampling and importance sampling
 
 ######################################################################
 # define example-specific functions
 
-dim = 2
-getB          = lambda x        : np.array([-x[0] * x[1], x[0]**2])
-getGradB      = lambda x, dx    : np.array([[-x[1], -x[0]], [2. * x[0], 0. * x[0]]]) @ dx
-getGradBT     = lambda x, dx    : np.array([[-x[1], 2. * x[0]], [-x[0], 0. * x[0]]]) @ dx
-getHessBTheta = lambda x, p, dx : np.array([[2. * p[1], -p[0]], [-p[0], 0. * x[0]]]) @ dx
-getIF         = lambda x, dt    : np.array([x[0] * np.exp(-dt), x[1] * np.exp(-4. * dt)])
-getIFT        = lambda x, dt    : getIF(x, dt)
-getIFRic      = lambda x, dt    : np.array([[x[0,0] * np.exp(-2. * dt), x[0,1] * np.exp(-5. * dt)],[x[1,0] * np.exp(-5. * dt), x[1,1] * np.exp(-8. * dt)]])
-getF          = lambda x        : x[0] + 2. * x[1]
-getGradF      = lambda x, dx    : dx[0] + 2. * dx[1]
-getGradFT     = lambda x, dx    : dx * np.array([1., 2.])
-getHessF      = lambda x, dx    : np.zeros_like(dx)
-getSigma      = lambda x        : np.array([x[0], 0.5 * x[1]])
-getA          = lambda x        : np.array([x[0], 0.25 * x[1]])
-getAInverse   = lambda x        : np.array([x[0], 4. * x[1]])
+dim = 2                         # spatial dimension n of the model
+getB          = lambda x        : np.array([-x[0] * x[1], x[0]**2])                       # drift vector field b (without linear terms)
+getGradB      = lambda x, dx    : np.array([[-x[1], -x[0]], [2. * x[0], 0. * x[0]]]) @ dx # Jacobian of b times dx
+getGradBT     = lambda x, dx    : np.array([[-x[1], 2. * x[0]], [-x[0], 0. * x[0]]]) @ dx # transposed Jacobian of b times dx
+getHessBTheta = lambda x, p, dx : np.array([[2. * p[1], -p[0]], [-p[0], 0. * x[0]]]) @ dx # \partial_i \partial_j b_k(x) p_k dx_j
+getIF         = lambda x, dt    : np.array([x[0] * np.exp(-dt), x[1] * np.exp(-4. * dt)]) # integrating factor for linear terms in b times x
+getIFT        = lambda x, dt    : getIF(x, dt)                                            # transposed integrating factor for linear terms in b times x
+getIFRic      = lambda x, dt    : np.array([[x[0,0] * np.exp(-2. * dt), x[0,1] * np.exp(-5. * dt)],[x[1,0] * np.exp(-5. * dt), x[1,1] * np.exp(-8. * dt)]]) # integrating factor for Riccati eq.
+getF          = lambda x        : x[0] + 2. * x[1]              # observable
+getGradF      = lambda x, dx    : dx[0] + 2. * dx[1]            # observable gradient times dx
+getGradFT     = lambda x, dx    : dx * np.array([1., 2.])       # just the observable gradient vector
+getHessF      = lambda x, dx    : np.zeros_like(dx)             # Hessian matrix of observable
+getSigma      = lambda x        : np.array([x[0], 0.5 * x[1]])  # forcing correlation in SDE
+getA          = lambda x        : np.array([x[0], 0.25 * x[1]]) # diffusion matrix a = sigma sigma^\top
+getAInverse   = lambda x        : np.array([x[0], 4. * x[1]])   # inverse of diffusion matrix
 
 ######################################################################
 # function for direct sampling to get tail probability and sample paths
 
-def getSamplePaths(nPaths = 1000, nParallel = int(1e4), conf = 0.95):
+def getSamplePaths(nPaths = 100, nParallel = int(1e4), conf = 0.95):
     print('Performing direct sampling for paths with f(X_T^eps) > z with z = {} and eps = {}'.format(z, eps))
     print('Aiming for {} samples, with {} simluations in parallel'.format(nPaths, nParallel))
     i = 0
@@ -285,7 +286,7 @@ class SecondVariationOperator(LinearOperator):
             
     def _matvec(self, inp):
         self.counter += 1
-        # ~ print('Application no. {} of operator'.format(self.counter))
+        print('Application no. {} of operator'.format(self.counter))
         inpp = np.reshape(inp, (nt + 1, dim))
         if self.useEtaPerpProjection:
             inpp = inpp - getTimeIntegral(self.eta, inpp) * self.eta / self.eta_norm**2 
@@ -310,11 +311,17 @@ if __name__ == '__main__':
     
     np.save(data_dir + '/target_obs.npy', z)
     ############################################################
+    # direct sampling for paths that exceed observable threshold,
+    # this might take some time
+    
     paths, prob, std = getSamplePaths()
     np.save(data_dir + '/direct_sampling_paths_eps_{}.npy'.format(eps), paths)
     np.save(data_dir + '/direct_sampling_prob_eps_{}.npy'.format(eps), prob)
     np.save(data_dir + '/direct_sampling_prob_std_eps_{}.npy'.format(eps), std)
+    
     ############################################################
+    # instanton computation
+    
     instanton = Instanton()
     obsValue, action, lbda, theta, phi, dS = instanton.searchInstantonViaAugmented(z)
     np.save(data_dir + '/inst_obs.npy', obsValue)
@@ -324,6 +331,8 @@ if __name__ == '__main__':
     np.save(data_dir + '/inst_phi.npy', phi)
     np.save(data_dir + '/inst_ds.npy', dS)
     ############################################################
+    # solve Riccati eq. along instanton, needs instanton to be computed first
+    
     phi = np.load(data_dir + '/inst_phi.npy')
     theta = np.load(data_dir + '/inst_theta.npy')
     lbda = np.load(data_dir + '/inst_lbda.npy')
@@ -331,6 +340,8 @@ if __name__ == '__main__':
     np.save(data_dir + '/ric_cf.npy', cf)
     np.save(data_dir + '/ric_Q.npy', Q)
     ############################################################
+    # find eigenvalues of A_z, needs instanton to be computed first
+    
     phi = np.load(data_dir + '/inst_phi.npy')
     theta = np.load(data_dir + '/inst_theta.npy')
     lbda = np.load(data_dir + '/inst_lbda.npy')
@@ -348,7 +359,10 @@ if __name__ == '__main__':
         A(evecs[:, i])
         gamma[:,:,i] = copy.copy(A.gamma)
     np.save(data_dir + '/evals_gamma.npy', gamma)
+    
     ############################################################
+    # importance sampling, needs instanton to be computed first
+    
     phi = np.load(data_dir + '/inst_phi.npy')
     theta = np.load(data_dir + '/inst_theta.npy')
     lbda = np.load(data_dir + '/inst_lbda.npy')
