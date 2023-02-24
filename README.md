@@ -30,6 +30,7 @@ These are the default parameters that were also used in the paper:
 ### Prerequisites
 
 The python3 scripts just require numpy, scipy and matplotlib.
+They were tested under Python 3.6.9, numpy 1.19.5, scipy 1.4.1 and matplotlib 3.3.4.
 
 ### How to execute
 
@@ -37,7 +38,7 @@ The python3 scripts just require numpy, scipy and matplotlib.
    ```sh
    python3 compute.py
    ```
-   in order to collect the following data for the toy problem:
+   to collect the following data for the toy problem:
    * `nPaths = 100` sample paths with $f(X(T), Y(T)) \geq z$ using `getSamplePaths()` via direct sampling
    * the instanton for $z$ using `instanton.searchInstantonViaAugmented()` to compute the rate function
    * the Riccati solution along this instanton using `solveForwardRiccati()` to compute the prefactor

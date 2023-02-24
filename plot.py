@@ -12,7 +12,7 @@ import matplotlib.ticker as ticker
 pgf_with_latex = {
     "pgf.texsystem": "pdflatex",
     "text.usetex": True,
-    "font.family": "regular",
+    "font.family": "DejaVu Sans",
     "font.serif": [],
     "font.sans-serif": [],
     "font.monospace": [],
@@ -21,12 +21,11 @@ pgf_with_latex = {
     "legend.fontsize": 13,
     "xtick.labelsize": 13,
     "ytick.labelsize": 13,
-    "pgf.preamble": [
-        r"\usepackage[utf8x]{inputenc}",
-        r"\usepackage[T1]{fontenc}",
-        r"\usepackage{amsmath}",
-        r"\usepackage{amssymb} "
-        ]
+    "pgf.preamble":
+        r"\usepackage[utf8x]{inputenc} \
+        \usepackage[T1]{fontenc} \
+        \usepackage{amsmath} \
+        \usepackage{amssymb} "
     }
     
 mpl.rcParams.update(pgf_with_latex)
@@ -230,7 +229,8 @@ def plotCondHists(eps = 0.5):
             
             XX, YY = np.meshgrid(xbins, ybins, indexing = 'ij')
             fullHist = fullHist / np.sum(fullHist * (xbins[1] - xbins[0]) * (ybins[1] - ybins[0]))
-            p1 = axx[0,0].imshow(np.ma.masked_where(fullHist.T == 0., np.log(fullHist.T)), origin = 'lower', extent = (np.amin(xbins), np.amax(xbins), np.amin(ybins), np.amax(ybins)), cmap = 'Oranges')
+            with np.errstate(divide = 'ignore', invalid = 'ignore'):
+                p1 = axx[0,0].imshow(np.ma.masked_where(fullHist.T == 0., np.log(fullHist.T)), origin = 'lower', extent = (np.amin(xbins), np.amax(xbins), np.amin(ybins), np.amax(ybins)), cmap = 'Oranges')
             cb = fig.colorbar(p1, ax = axx[0,0])
             cb.ax.set_title(r'$\log \rho$', fontsize=12)
             cb.ax.tick_params(labelsize=10)
@@ -258,7 +258,6 @@ def plotCondHists(eps = 0.5):
             labels = [r'PDF levels sets for ${\cal N}\left(\phi_z(t), \varepsilon {\cal C}_z(t,t)\right)$', r'instanton trajectory $\left(\phi_z(t) \right)_{t \in [0,T]}$', r'target set $f^{-1}(\{z\})$', r'initial position $x$', r'current instanton position $\phi_z(t)$', r'current mean $X_t^\varepsilon$']
             leg = axx[0,0].legend(lines, labels, facecolor = 'gainsboro', ncol = 3, fancybox = True, loc = 'upper center', bbox_to_anchor=  (2., 1.35))
         
-    plt.tight_layout()
     plt.savefig('filter-pdfs-eps-{}.pdf'.format(eps), bbox_inches = 'tight')
     plt.close()
 
