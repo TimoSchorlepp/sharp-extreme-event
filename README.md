@@ -52,4 +52,4 @@ They were tested under Python 3.6.9, numpy 1.19.5, scipy 1.4.1 and matplotlib 3.
    ```sh
    python3 plot.py
    ```
-   afterwards to reproduce figures 1, 2 and 4 from the paper.
+   afterwards to reproduce figures 1, 2, 3 and 5 from the paper.
