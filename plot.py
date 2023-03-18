@@ -5,6 +5,8 @@ from scipy.stats import norm
 import matplotlib.patheffects as pe
 import matplotlib.patches as patches
 import matplotlib.ticker as ticker
+from matplotlib.legend_handler import HandlerTuple
+import compute as mod
 
 ########################################################################
 # settings for plots
@@ -36,6 +38,64 @@ insetFontSize = 10
 
 ########################################################################
 # script for Fig 1
+
+def sketchSetup(eps = 0.5):
+    path = 'data'
+    
+    z = np.load(path + '/target_obs.npy')
+    paths = np.load(path + '/direct_sampling_paths_eps_{}.npy'.format(eps))
+
+    fig = plt.figure(figsize = (6, 5))
+    ax = fig.add_subplot(1,1,1)
+
+    x = np.linspace(-0.5, 3., 100)
+    y = np.linspace(-0.5, 3., 100)
+    X, Y = np.meshgrid(x, y, indexing = 'ij')
+    BX,BY = -X * Y - X, X**2 - 4. * Y
+    ax.streamplot(x, y, BX.T, BY.T, color = 'grey', linewidth = 0.4, density = 1.5)
+
+    init = ax.scatter(0., 0., color = 'black', zorder = 20)
+    
+    np.random.seed(123)
+    p = np.zeros((mod.nt + 1, 2))
+    for j in range(mod.nt):
+        p[j + 1] = mod.getIF(p[j] + mod.dt * mod.getB(p[j]) + np.sqrt(eps * mod.dt) * mod.getSigma( \
+                         np.random.randn(2)), mod.dt)
+    p1, = ax.plot(p[:,0], p[:,1], color = 'navy', alpha = 0.4, zorder = 5)
+    s1 = ax.scatter(p[-1,0], p[-1,1], color = 'navy', zorder = 20)
+
+    np.random.seed(139)
+    p = np.zeros((mod.nt + 1, 2))
+    for j in range(mod.nt):
+        p[j + 1] = mod.getIF(p[j] + mod.dt * mod.getB(p[j]) + np.sqrt(eps * mod.dt) * mod.getSigma( \
+                         np.random.randn(2)), mod.dt)
+    p2, = ax.plot(p[:,0], p[:,1], color = 'seagreen', alpha = 0.5, zorder = 5)
+    s2 = ax.scatter(p[-1,0], p[-1,1], color = 'seagreen', zorder = 20)
+
+    i = 6
+    p3, = ax.plot(paths[:,0,i], paths[:,1,i], color = 'orange', alpha = 0.7, zorder = 5, label = 'sample paths')
+    s3 = ax.scatter(paths[-1,0,i], paths[-1,1,i], color = 'orange', zorder = 20, label = r'final positions')
+
+    targetSet = (z - x) / 2
+    ax.fill_between(x, targetSet, 10 * targetSet, color = 'white', alpha = 1, zorder = 00)
+    ev = ax.fill_between(x, targetSet, 10 * targetSet, color = 'firebrick', alpha = 0.3, zorder = 0)
+    ax.plot(x, targetSet, color = 'firebrick', linewidth = 3, zorder = 101)
+    ax.text(1.6,0.85,r'$f^{-1} \left([z, \infty) \right)$',zorder = 102, fontsize = 15)
+
+    ax.set_xlim(-0.35, 2.3)
+    ax.set_ylim(-0.25, 1.)
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    ax.legend([init, (p1, p2, p3), (s1, s2, s3), ev], [r'initial position $x$', r'sample paths of $\left(X_t \right)_{t \in [0,T]}$', r'final positions $X_T$', 'event set'],
+                   handler_map={tuple: HandlerTuple(ndivide=None)}, loc = 2, framealpha = 1)
+
+    plt.tight_layout(rect=[0, 0., 1., 1.])
+    fig.savefig('paths-sketch.pdf'.format(eps), dpi = 800, bbox_inches = 'tight')
+    plt.close()
+
+########################################################################
+# script for Fig 2
 
 def plotSetup(eps = 0.5):
     path = 'data'
@@ -88,12 +148,11 @@ def plotSetup(eps = 0.5):
     ax.set_xlabel(r'$x$')
     ax.set_ylabel(r'$y$')
     ax.legend(loc = 2, framealpha = 1).set_zorder(100)
-    ax.set_title(r'$\varepsilon = {}$'.format(eps))
 
     plt.tight_layout(rect=[0, 0., 1., 1.])
     fig.savefig('paths-eps-{}.pdf'.format(eps), dpi = 800, bbox_inches = 'tight')
     plt.close()
-
+    
 ########################################################################
 # script for Fig 2
 
@@ -264,6 +323,7 @@ def plotCondHists(eps = 0.5):
 ########################################################################
 
 if __name__ == '__main__':
+    sketchSetup(eps = 0.5)
     plotSetup(eps = 0.5)
     plotEvalSpec()
     plotCondHists(eps = 0.5)
