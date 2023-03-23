@@ -1,5 +1,7 @@
 # Source Code for "Scalable Methods for Computing Sharp Extreme Event Probabilities in Infinite-Dimensional Stochastic Systems"
 
+> T. Schorlepp, S. Tong, T. Grafke and G. Stadler, "Scalable Methods for Computing Sharp Extreme Event Probabilities in Infinite-Dimensional Stochastic Systems", [arXiv:2303.11919](https://arxiv.org/abs/2303.11919) [stat.CO], March 2023.
+
 ### Problem formulation
 
 The code in this repository can be used to determine the tail probability
